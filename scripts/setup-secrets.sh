@@ -30,7 +30,7 @@ setup_kimi() {
     read -r -p "模型名 [默认 kimi-k2-turbo-preview]: " MODEL; MODEL="${MODEL:-kimi-k2-turbo-preview}"
   else
     BASE_URL="https://api.kimi.com/coding/v1"
-    read -r -p "模型名 [默认 kimi-for-coding]: " MODEL; MODEL="${MODEL:-kimi-for-coding}"
+    read -r -p "模型名 [默认 k3.1-pro]: " MODEL; MODEL="${MODEL:-k3.1-pro}"
   fi
   read -r -s -p "API Key（输入不可见）: " KEY; echo
   [ -n "${KEY}" ] || { echo "为空，跳过"; return; }
@@ -49,8 +49,10 @@ api_key = "${KEY}"
 [models."bot/${MODEL}"]
 provider = "bot"
 model = "${MODEL}"
-max_context_size = 262144
-capabilities = ["thinking", "tool_use", "image_in"]
+max_context_size = 1048576
+capabilities = ["thinking", "always_thinking", "image_in", "video_in", "tool_use", "dynamically_loaded_tools"]
+support_efforts = ["low", "high", "max"]
+default_effort = "high"
 EOF
   unset KEY
 }
