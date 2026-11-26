@@ -1,0 +1,12 @@
+{
+  "upstream": {
+    "seen_sha": null,
+    "compat_sha": "3f514458d21e650c802ffcbdabc6ed07fe1f471e",
+    "compat_blob": "51a8f12729d5a70ec8a49231430f2593bbf1b05e",
+    "compat_at": "2026-11-26T07:47:45+00:00"
+  },
+  "inflight": null,
+  "last_release": null,
+  "history": [],
+  "updated_at": "2026-11-26T07:47:45+00:00"
+}

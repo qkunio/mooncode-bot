@@ -1,0 +1,75 @@
+{
+  "upstream": {
+    "repo": "MoonshotAI/kimi-code",
+    "branch": "main",
+    "contract_path": "packages/kap-server/schema/contract.txt",
+    "kap_doc_path": "packages/kap-server/docs/kap.md",
+    "seed_ref": "3f514458",
+    "seed_note": "契约文件 contract.txt 首次出现的提交（2026-11-20），最接近 MoonCode 1.9 已适配的 2.7.2",
+    "max_intent_commits": 12
+  },
+  "target": {
+    "repo": "qkunio/mooncode",
+    "branch": "main",
+    "workdir": "workspace/mooncode",
+    "branch_prefix": "bot/kap-",
+    "surface_globs": [
+      "KimiCode/Core/*.swift",
+      "KimiCode/Features/Session/ChatModel.swift",
+      "KimiCode/Features/Session/ConversationBuilder.swift"
+    ],
+    "surface_extra": [
+      "GET /api/v1/files/{}",
+      "GET /api/v1/sessions/{}/media/{}",
+      "ws client subscribe",
+      "ws client pong"
+    ],
+    "surface_ignore": []
+  },
+  "kimi": {
+    "bin": "kimi",
+    "model": null,
+    "timeout_sec": 2700,
+    "agents_dir": "agents",
+    "skills_dir": "skills"
+  },
+  "context": {
+    "budget_tokens": {
+      "triage": 24000,
+      "patch": 30000,
+      "fix": 6000,
+      "review": 22000,
+      "release": 5000,
+      "distill": 8000
+    },
+    "ledger_max_chars": 12000,
+    "episodes_in_context": 3,
+    "log_digest_max_chars": 6000,
+    "diff_max_chars_per_file": 12000
+  },
+  "verify": {
+    "commands": [
+      "xcodebuild -project KimiCode.xcodeproj -scheme KimiCode -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath build/bot-dd CODE_SIGNING_ALLOWED=NO -quiet build",
+      "bash scripts/check-attachments.sh",
+      "bash scripts/check-device-usage.sh"
+    ],
+    "timeout_sec": 1800,
+    "max_fix_rounds": 3
+  },
+  "review": {
+    "max_rounds": 1
+  },
+  "ship": {
+    "auto_merge": true,
+    "merge_method": "squash"
+  },
+  "release": {
+    "auto": true,
+    "version_floor": "1.10",
+    "workflow": "release.yml",
+    "wait_for_run_sec": 180
+  },
+  "safety": {
+    "armed_env": "BOT_ARMED"
+  }
+}

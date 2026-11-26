@@ -1,0 +1,539 @@
+{
+  "ops": {
+    "* /api/v1/files": [
+      "KimiCode/Core/KapClient.swift:352",
+      "KimiCode/Core/KapClient.swift:370"
+    ],
+    "* /api/v1/media": [
+      "KimiCode/Core/KapClient.swift:374"
+    ],
+    "* /api/v1/providers/{}": [
+      "KimiCode/Core/KapClient.swift:168"
+    ],
+    "* /api/v1/sessions": [
+      "KimiCode/Core/KapClient.swift:373"
+    ],
+    "* /api/v1/sessions/{}": [
+      "KimiCode/Core/Endpoint.swift:29"
+    ],
+    "GET /api/v1/catalog/providers": [
+      "KimiCode/Core/KapClient.swift:195"
+    ],
+    "GET /api/v1/config": [
+      "KimiCode/Core/KapClient.swift:133",
+      "KimiCode/Core/KapClient.swift:154"
+    ],
+    "GET /api/v1/files/{}": [
+      "config:surface_extra"
+    ],
+    "GET /api/v1/fs:browse": [
+      "KimiCode/Core/KapClient.swift:56"
+    ],
+    "GET /api/v1/fs:home": [
+      "KimiCode/Core/KapClient.swift:60"
+    ],
+    "GET /api/v1/meta": [
+      "KimiCode/Core/KapClient.swift:25"
+    ],
+    "GET /api/v1/models": [
+      "KimiCode/Core/KapClient.swift:128"
+    ],
+    "GET /api/v1/oauth/usage": [
+      "KimiCode/Core/KapClient.swift:221"
+    ],
+    "GET /api/v1/oauth/userinfo": [
+      "KimiCode/Core/KapClient.swift:226"
+    ],
+    "GET /api/v1/providers": [
+      "KimiCode/Core/KapClient.swift:143"
+    ],
+    "GET /api/v1/providers/{}": [
+      "KimiCode/Core/KapClient.swift:149"
+    ],
+    "GET /api/v1/sessions": [
+      "KimiCode/Core/KapClient.swift:41"
+    ],
+    "GET /api/v1/sessions/{}": [
+      "KimiCode/Core/KapClient.swift:231"
+    ],
+    "GET /api/v1/sessions/{}/agents/main/turns": [
+      "KimiCode/Core/KapClient.swift:277"
+    ],
+    "GET /api/v1/sessions/{}/approvals": [
+      "KimiCode/Core/KapClient.swift:436"
+    ],
+    "GET /api/v1/sessions/{}/interactions": [
+      "KimiCode/Core/KapClient.swift:432"
+    ],
+    "GET /api/v1/sessions/{}/media/{}": [
+      "config:surface_extra"
+    ],
+    "GET /api/v1/sessions/{}/questions": [
+      "KimiCode/Core/KapClient.swift:459"
+    ],
+    "GET /api/v1/sessions/{}/status": [
+      "KimiCode/Core/KapClient.swift:235"
+    ],
+    "GET /api/v1/sessions/{}/transcript": [
+      "KimiCode/Core/KapClient.swift:285"
+    ],
+    "GET /api/v1/workspaces": [
+      "KimiCode/Core/KapClient.swift:45"
+    ],
+    "POST /api/v1/config": [
+      "KimiCode/Core/KapClient.swift:137"
+    ],
+    "POST /api/v1/providers": [
+      "KimiCode/Core/KapClient.swift:159"
+    ],
+    "POST /api/v1/providers/{}:refresh": [
+      "KimiCode/Core/KapClient.swift:188"
+    ],
+    "POST /api/v1/providers:import_catalog": [
+      "KimiCode/Core/KapClient.swift:214"
+    ],
+    "POST /api/v1/sessions": [
+      "KimiCode/Core/KapClient.swift:323"
+    ],
+    "POST /api/v1/sessions/{}/approvals/{}": [
+      "KimiCode/Core/KapClient.swift:447"
+    ],
+    "POST /api/v1/sessions/{}/fs:list": [
+      "KimiCode/Core/KapClient.swift:66"
+    ],
+    "POST /api/v1/sessions/{}/fs:read": [
+      "KimiCode/Core/KapClient.swift:122"
+    ],
+    "POST /api/v1/sessions/{}/interactions/{}": [
+      "KimiCode/Core/KapClient.swift:490",
+      "KimiCode/Core/KapClient.swift:500"
+    ],
+    "POST /api/v1/sessions/{}/profile": [
+      "KimiCode/Core/KapClient.swift:246",
+      "KimiCode/Core/KapClient.swift:255"
+    ],
+    "POST /api/v1/sessions/{}/prompts": [
+      "KimiCode/Core/KapClient.swift:332"
+    ],
+    "POST /api/v1/sessions/{}/questions/{}": [
+      "KimiCode/Core/KapClient.swift:464"
+    ],
+    "POST /api/v1/sessions/{}/questions/{}:dismiss": [
+      "KimiCode/Core/KapClient.swift:471"
+    ],
+    "POST /api/v1/sessions/{}:abort": [
+      "KimiCode/Core/KapClient.swift:425"
+    ],
+    "POST /api/v1/sessions/{}:cancel": [
+      "KimiCode/Core/KapClient.swift:420"
+    ],
+    "POST /api/v1/sessions/{}:delete": [
+      "KimiCode/Core/KapClient.swift:263"
+    ],
+    "POST /api/v1/sessions/{}:undo": [
+      "KimiCode/Core/KapClient.swift:291",
+      "KimiCode/Core/KapClient.swift:305"
+    ],
+    "POST /api/v1/workspaces": [
+      "KimiCode/Core/KapClient.swift:52"
+    ],
+    "PUT /api/v1/providers/{}": [
+      "KimiCode/Core/KapClient.swift:163"
+    ],
+    "ws * aborted": [
+      "KimiCode/Features/Session/ChatModel.swift:219"
+    ],
+    "ws * access_denied": [
+      "KimiCode/Core/AuthStore.swift:297"
+    ],
+    "ws * ack": [
+      "KimiCode/Core/EventStream.swift:415"
+    ],
+    "ws * agent": [
+      "KimiCode/Core/EventStream.swift:476",
+      "KimiCode/Core/Transcript.swift:654"
+    ],
+    "ws * agentswarm": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:649",
+      "KimiCode/Features/Session/ConversationBuilder.swift:673"
+    ],
+    "ws * append": [
+      "KimiCode/Core/Transcript.swift:307"
+    ],
+    "ws * askuserquestion": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:650",
+      "KimiCode/Features/Session/ConversationBuilder.swift:674"
+    ],
+    "ws * assistant_message": [
+      "KimiCode/Core/Conversation.swift:648"
+    ],
+    "ws * attachment": [
+      "KimiCode/Core/Transcript.swift:332"
+    ],
+    "ws * attachment_upsert": [
+      "KimiCode/Core/Transcript.swift:332"
+    ],
+    "ws * authorization_pending": [
+      "KimiCode/Core/AuthStore.swift:295"
+    ],
+    "ws * bash": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:641",
+      "KimiCode/Features/Session/ConversationBuilder.swift:664",
+      "KimiCode/Features/Session/ConversationBuilder.swift:717",
+      "KimiCode/Features/Session/ConversationBuilder.swift:876",
+      "KimiCode/Features/Session/ConversationBuilder.swift:947"
+    ],
+    "ws * cancelled": [
+      "KimiCode/Features/Session/ChatModel.swift:225",
+      "KimiCode/Features/Session/ConversationBuilder.swift:390"
+    ],
+    "ws * context": [
+      "KimiCode/Core/EventStream.swift:488"
+    ],
+    "ws * creategoal": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:651",
+      "KimiCode/Features/Session/ConversationBuilder.swift:676"
+    ],
+    "ws * croncreate": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:655"
+    ],
+    "ws * crondelete": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:655"
+    ],
+    "ws * cronlist": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:655"
+    ],
+    "ws * darwin": [
+      "KimiCode/Core/Models.swift:58"
+    ],
+    "ws * edit": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:642",
+      "KimiCode/Features/Session/ConversationBuilder.swift:665",
+      "KimiCode/Features/Session/ConversationBuilder.swift:715",
+      "KimiCode/Features/Session/ConversationBuilder.swift:771",
+      "KimiCode/Features/Session/ConversationBuilder.swift:882",
+      "KimiCode/Features/Session/ConversationBuilder.swift:952"
+    ],
+    "ws * error": [
+      "KimiCode/Core/EventStream.swift:527",
+      "KimiCode/Features/Session/ConversationBuilder.swift:388"
+    ],
+    "ws * exitplanmode": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:640",
+      "KimiCode/Features/Session/ConversationBuilder.swift:675"
+    ],
+    "ws * expired_token": [
+      "KimiCode/Core/AuthStore.swift:298"
+    ],
+    "ws * failed": [
+      "KimiCode/Core/Conversation.swift:706",
+      "KimiCode/Features/Session/ChatModel.swift:227"
+    ],
+    "ws * file": [
+      "KimiCode/Core/Models.swift:1255"
+    ],
+    "ws * frame": [
+      "KimiCode/Core/Transcript.swift:301"
+    ],
+    "ws * frame_upsert": [
+      "KimiCode/Core/Transcript.swift:301"
+    ],
+    "ws * getgoal": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:651",
+      "KimiCode/Features/Session/ConversationBuilder.swift:677"
+    ],
+    "ws * glob": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:645",
+      "KimiCode/Features/Session/ConversationBuilder.swift:668",
+      "KimiCode/Features/Session/ConversationBuilder.swift:724",
+      "KimiCode/Features/Session/ConversationBuilder.swift:879",
+      "KimiCode/Features/Session/ConversationBuilder.swift:949"
+    ],
+    "ws * grep": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:644",
+      "KimiCode/Features/Session/ConversationBuilder.swift:667",
+      "KimiCode/Features/Session/ConversationBuilder.swift:719",
+      "KimiCode/Features/Session/ConversationBuilder.swift:768",
+      "KimiCode/Features/Session/ConversationBuilder.swift:877",
+      "KimiCode/Features/Session/ConversationBuilder.swift:948"
+    ],
+    "ws * interaction": [
+      "KimiCode/Core/EventStream.swift:500",
+      "KimiCode/Core/Transcript.swift:330"
+    ],
+    "ws * interaction_upsert": [
+      "KimiCode/Core/Transcript.swift:330"
+    ],
+    "ws * interrupted": [
+      "KimiCode/Core/Conversation.swift:707"
+    ],
+    "ws * item": [
+      "KimiCode/Core/Conversation.swift:344",
+      "KimiCode/Core/Conversation.swift:349",
+      "KimiCode/Core/Conversation.swift:354",
+      "KimiCode/Core/Conversation.swift:360",
+      "KimiCode/Core/Conversation.swift:367",
+      "KimiCode/Core/EventStream.swift:461"
+    ],
+    "ws * item_delta": [
+      "KimiCode/Core/Conversation.swift:360",
+      "KimiCode/Core/EventStream.swift:461"
+    ],
+    "ws * item_ended": [
+      "KimiCode/Core/Conversation.swift:349",
+      "KimiCode/Core/EventStream.swift:461"
+    ],
+    "ws * item_removed": [
+      "KimiCode/Core/Conversation.swift:367",
+      "KimiCode/Core/EventStream.swift:461"
+    ],
+    "ws * item_started": [
+      "KimiCode/Core/Conversation.swift:344",
+      "KimiCode/Core/EventStream.swift:461"
+    ],
+    "ws * item_updated": [
+      "KimiCode/Core/Conversation.swift:354",
+      "KimiCode/Core/EventStream.swift:461"
+    ],
+    "ws * items": [
+      "KimiCode/Core/Transcript.swift:338"
+    ],
+    "ws * items_remove": [
+      "KimiCode/Core/Transcript.swift:338"
+    ],
+    "ws * linux": [
+      "KimiCode/Core/Models.swift:60"
+    ],
+    "ws * ls": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:646",
+      "KimiCode/Features/Session/ConversationBuilder.swift:669",
+      "KimiCode/Features/Session/ConversationBuilder.swift:729",
+      "KimiCode/Features/Session/ConversationBuilder.swift:880",
+      "KimiCode/Features/Session/ConversationBuilder.swift:950"
+    ],
+    "ws * marker": [
+      "KimiCode/Core/Transcript.swift:199",
+      "KimiCode/Core/Transcript.swift:323"
+    ],
+    "ws * marker_upsert": [
+      "KimiCode/Core/Transcript.swift:323"
+    ],
+    "ws * max_steps": [
+      "KimiCode/Features/Session/ChatModel.swift:220"
+    ],
+    "ws * meta": [
+      "KimiCode/Core/Transcript.swift:336"
+    ],
+    "ws * meta_merge": [
+      "KimiCode/Core/Transcript.swift:336"
+    ],
+    "ws * multi_edit": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:642",
+      "KimiCode/Features/Session/ConversationBuilder.swift:665",
+      "KimiCode/Features/Session/ConversationBuilder.swift:715",
+      "KimiCode/Features/Session/ConversationBuilder.swift:771"
+    ],
+    "ws * notice": [
+      "KimiCode/Core/Conversation.swift:379",
+      "KimiCode/Core/EventStream.swift:461",
+      "KimiCode/Features/Session/ConversationBuilder.swift:403"
+    ],
+    "ws * notification": [
+      "KimiCode/Core/Conversation.swift:655"
+    ],
+    "ws * off": [
+      "KimiCode/Core/Models.swift:1176"
+    ],
+    "ws * on": [
+      "KimiCode/Core/Models.swift:1175"
+    ],
+    "ws * ping": [
+      "KimiCode/Core/EventStream.swift:392"
+    ],
+    "ws * pong": [
+      "KimiCode/Core/EventStream.swift:389"
+    ],
+    "ws * prompt": [
+      "KimiCode/Core/Transcript.swift:334"
+    ],
+    "ws * prompt_upsert": [
+      "KimiCode/Core/Transcript.swift:334"
+    ],
+    "ws * read": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:640",
+      "KimiCode/Features/Session/ConversationBuilder.swift:663",
+      "KimiCode/Features/Session/ConversationBuilder.swift:706",
+      "KimiCode/Features/Session/ConversationBuilder.swift:766",
+      "KimiCode/Features/Session/ConversationBuilder.swift:875",
+      "KimiCode/Features/Session/ConversationBuilder.swift:946"
+    ],
+    "ws * reasoning": [
+      "KimiCode/Core/Conversation.swift:651"
+    ],
+    "ws * reset": [
+      "KimiCode/Core/Transcript.swift:292"
+    ],
+    "ws * response": [
+      "KimiCode/Core/EventStream.swift:400"
+    ],
+    "ws * resync_required": [
+      "KimiCode/Core/EventStream.swift:454"
+    ],
+    "ws * running": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:389"
+    ],
+    "ws * search": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:644",
+      "KimiCode/Features/Session/ConversationBuilder.swift:667",
+      "KimiCode/Features/Session/ConversationBuilder.swift:719",
+      "KimiCode/Features/Session/ConversationBuilder.swift:768",
+      "KimiCode/Features/Session/ConversationBuilder.swift:878",
+      "KimiCode/Features/Session/ConversationBuilder.swift:948"
+    ],
+    "ws * session_media": [
+      "KimiCode/Core/Models.swift:1258"
+    ],
+    "ws * setgoalbudget": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:651",
+      "KimiCode/Features/Session/ConversationBuilder.swift:678"
+    ],
+    "ws * slow_down": [
+      "KimiCode/Core/AuthStore.swift:296"
+    ],
+    "ws * step": [
+      "KimiCode/Core/Transcript.swift:296"
+    ],
+    "ws * step_upsert": [
+      "KimiCode/Core/Transcript.swift:296"
+    ],
+    "ws * task": [
+      "KimiCode/Core/Transcript.swift:328",
+      "KimiCode/Features/Session/ConversationBuilder.swift:649",
+      "KimiCode/Features/Session/ConversationBuilder.swift:672",
+      "KimiCode/Features/Session/ConversationBuilder.swift:738"
+    ],
+    "ws * task_upsert": [
+      "KimiCode/Core/Transcript.swift:328"
+    ],
+    "ws * tasklist": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:653",
+      "KimiCode/Features/Session/ConversationBuilder.swift:681"
+    ],
+    "ws * taskoutput": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:640",
+      "KimiCode/Features/Session/ConversationBuilder.swift:682"
+    ],
+    "ws * taskref": [
+      "KimiCode/Core/Transcript.swift:200",
+      "KimiCode/Core/Transcript.swift:323"
+    ],
+    "ws * taskref_upsert": [
+      "KimiCode/Core/Transcript.swift:323"
+    ],
+    "ws * taskstop": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:654",
+      "KimiCode/Features/Session/ConversationBuilder.swift:683"
+    ],
+    "ws * text": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:355"
+    ],
+    "ws * thinking": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:358"
+    ],
+    "ws * todo": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:648",
+      "KimiCode/Features/Session/ConversationBuilder.swift:671",
+      "KimiCode/Features/Session/ConversationBuilder.swift:738"
+    ],
+    "ws * tool": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:384"
+    ],
+    "ws * tool_call": [
+      "KimiCode/Core/Conversation.swift:653"
+    ],
+    "ws * transcript": [
+      "KimiCode/Core/EventStream.swift:510"
+    ],
+    "ws * transcript_ops": [
+      "KimiCode/Core/EventStream.swift:510"
+    ],
+    "ws * transcript_reset": [
+      "KimiCode/Core/EventStream.swift:510"
+    ],
+    "ws * turn": [
+      "KimiCode/Core/Conversation.swift:334",
+      "KimiCode/Core/Conversation.swift:336",
+      "KimiCode/Core/Conversation.swift:338",
+      "KimiCode/Core/EventStream.swift:461",
+      "KimiCode/Core/Transcript.swift:198",
+      "KimiCode/Core/Transcript.swift:294"
+    ],
+    "ws * turn_ended": [
+      "KimiCode/Core/Conversation.swift:336",
+      "KimiCode/Core/EventStream.swift:461"
+    ],
+    "ws * turn_started": [
+      "KimiCode/Core/Conversation.swift:334",
+      "KimiCode/Core/EventStream.swift:461"
+    ],
+    "ws * turn_updated": [
+      "KimiCode/Core/Conversation.swift:338",
+      "KimiCode/Core/EventStream.swift:461"
+    ],
+    "ws * turn_upsert": [
+      "KimiCode/Core/Transcript.swift:294"
+    ],
+    "ws * turns": [
+      "KimiCode/Core/Conversation.swift:332",
+      "KimiCode/Core/Conversation.swift:372",
+      "KimiCode/Core/Conversation.swift:374",
+      "KimiCode/Core/EventStream.swift:461"
+    ],
+    "ws * turns_failed": [
+      "KimiCode/Core/Conversation.swift:374",
+      "KimiCode/Core/EventStream.swift:461"
+    ],
+    "ws * turns_removed": [
+      "KimiCode/Core/Conversation.swift:372",
+      "KimiCode/Core/EventStream.swift:461"
+    ],
+    "ws * updategoal": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:651",
+      "KimiCode/Features/Session/ConversationBuilder.swift:679"
+    ],
+    "ws * url": [
+      "KimiCode/Core/Models.swift:1261"
+    ],
+    "ws * usage": [
+      "KimiCode/Core/EventStream.swift:488"
+    ],
+    "ws * user_message": [
+      "KimiCode/Core/Conversation.swift:645"
+    ],
+    "ws * waitfor": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:652",
+      "KimiCode/Features/Session/ConversationBuilder.swift:680"
+    ],
+    "ws * web_fetch": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:647",
+      "KimiCode/Features/Session/ConversationBuilder.swift:670",
+      "KimiCode/Features/Session/ConversationBuilder.swift:731",
+      "KimiCode/Features/Session/ConversationBuilder.swift:881",
+      "KimiCode/Features/Session/ConversationBuilder.swift:951"
+    ],
+    "ws * write": [
+      "KimiCode/Features/Session/ConversationBuilder.swift:643",
+      "KimiCode/Features/Session/ConversationBuilder.swift:666",
+      "KimiCode/Features/Session/ConversationBuilder.swift:715",
+      "KimiCode/Features/Session/ConversationBuilder.swift:771",
+      "KimiCode/Features/Session/ConversationBuilder.swift:883",
+      "KimiCode/Features/Session/ConversationBuilder.swift:953"
+    ],
+    "ws client pong": [
+      "config:surface_extra"
+    ],
+    "ws client subscribe": [
+      "config:surface_extra"
+    ]
+  }
+}

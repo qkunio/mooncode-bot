@@ -1,0 +1,112 @@
+name: watch
+
+# 每 15 分钟看一眼上游 kimi-code main 的 KAP 契约；没变化时 3 个 API 调用就结束。
+# 有变化且影响 MoonCode 时，在 macOS runner 上用 kimi 生成补丁 → 构建验证 → 审查 → 合并 → 拉起提审。
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "演练：不 push / merge / 打 Tag"
+        type: boolean
+        default: true
+      head:
+        description: "指定上游 commit（默认 main HEAD）"
+        type: string
+        default: ""
+  repository_dispatch:
+    types: [kimi-code-main-updated]
+
+concurrency:
+  group: mooncode-bot
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    name: Probe upstream contract
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.probe.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: probe
+        env:
+          GH_TOKEN: ${{ secrets.MOONCODE_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, subprocess
+          from urllib.parse import quote
+          conf = json.load(open("config/bot.json"))
+          st = json.load(open("state/state.json"))
+          up = conf["upstream"]
+          def api(p):
+              return json.loads(subprocess.check_output(["gh", "api", p]))
+          head = api(f"repos/{up['repo']}/commits/{up['branch']}")["sha"]
+          blob = api(f"repos/{up['repo']}/contents/{up['contract_path']}?ref={head}")["sha"]
+          inflight = st.get("inflight") or {}
+          changed = blob != (st["upstream"].get("compat_blob")) or inflight.get("status") == "awaiting_merge"
+          print(f"head={head[:8]} blob={blob[:8]} compat_blob={(st['upstream'].get('compat_blob') or '')[:8]} changed={changed}")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write(f"changed={'true' if changed else 'false'}\n")
+          PY
+
+  adapt:
+    name: Detect · Adapt · Verify · Ship
+    needs: probe
+    if: github.event_name == 'workflow_dispatch' || (needs.probe.outputs.changed == 'true' && vars.BOT_ARMED == 'true')
+    runs-on: macos-26
+    timeout-minutes: 150
+    env:
+      GH_TOKEN: ${{ secrets.MOONCODE_TOKEN }}
+      KIMI_CODE_HOME: ${{ github.workspace }}/.kimi-home
+      # 定时任务是否真正执行副作用由仓库变量 BOT_ARMED 控制；手动触发看 dry_run 输入
+      BOT_ARMED: ${{ (github.event_name == 'workflow_dispatch' && !inputs.dry_run) || (github.event_name != 'workflow_dispatch' && vars.BOT_ARMED == 'true') }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install Kimi Code
+        run: npm install -g @moonshot-ai/kimi-code@latest && kimi --version
+      - name: Configure Kimi Code
+        env:
+          KIMI_CONFIG_TOML: ${{ secrets.KIMI_CONFIG_TOML }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$KIMI_CODE_HOME"
+          if [ -z "${KIMI_CONFIG_TOML}" ]; then echo "::error::缺少 secret KIMI_CONFIG_TOML"; exit 1; fi
+          printf '%s\n' "$KIMI_CONFIG_TOML" > "$KIMI_CODE_HOME/config.toml"
+          kimi doctor
+      - name: Configure git
+        run: |
+          gh auth setup-git
+          git config --global user.name mooncode-bot
+          git config --global user.email mooncode-bot@users.noreply.github.com
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app && xcodebuild -version
+      - name: Tick
+        id: tick
+        run: python3 -m bot tick ${{ inputs.head && format('--head {0}', inputs.head) || '' }}
+      - name: Persist state & memory
+        if: always() && env.BOT_ARMED == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git add state/state.json memory/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(bot): ${{ steps.tick.outputs.outcome || 'run' }} [skip ci]"
+            git pull --rebase origin main && git push origin HEAD:main
+          fi
+      - name: Upload run artifacts (context packs, transcripts, logs)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runs-${{ github.run_id }}
+          path: runs/
+          retention-days: 30
+          if-no-files-found: ignore

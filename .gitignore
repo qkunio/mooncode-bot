@@ -1,0 +1,9 @@
+# 运行产物：上下文包、kimi 事件流、构建日志（CI 中作为 artifact 上传，不进仓库）
+runs/
+# bot 独占的 MoonCode 工作副本
+workspace/
+state/.lock
+__pycache__/
+*.pyc
+.DS_Store
+.env
