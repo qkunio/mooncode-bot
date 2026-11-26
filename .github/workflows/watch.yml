@@ -11,6 +11,10 @@ on:
         description: "演练：不 push / merge / 打 Tag"
         type: boolean
         default: true
+      selftest:
+        description: "只做模型自检（用真实 Secret 把每个 agent 调一次）"
+        type: boolean
+        default: false
       version:
         description: "指定 Kimi Code 版本（默认 npm latest）"
         type: string
@@ -99,8 +103,12 @@ jobs:
           git config --global user.email mooncode-bot@users.noreply.github.com
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app && xcodebuild -version
+      - name: Kimi selftest
+        if: github.event_name == 'workflow_dispatch' && inputs.selftest
+        run: python3 -m bot selftest
       - name: Tick
         id: tick
+        if: "!(github.event_name == 'workflow_dispatch' && inputs.selftest)"
         run: python3 -m bot tick ${{ inputs.version && format('--version {0}', inputs.version) || '' }}
       - name: Persist state & memory
         if: always() && env.BOT_ARMED == 'true'

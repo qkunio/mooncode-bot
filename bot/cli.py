@@ -87,6 +87,37 @@ def cmd_status(args, conf) -> int:
     return 0
 
 
+def cmd_selftest(args, conf) -> int:
+    """用真实配置把每个 agent 调一次：确认模型可用、agent 定义能加载、handoff 能写回。"""
+    from pathlib import Path
+    from bot.kimi import read_handoff, run_kimi
+    from bot.util import ROOT
+
+    rid = "selftest-" + run_id()
+    agents = args.agents.split(",") if args.agents else ["triage", "patcher", "reviewer", "releaser", "distiller"]
+    ok = True
+    for name in agents:
+        sd = (ROOT / "runs" / rid / name).resolve()
+        handoff = sd / "handoff.json"
+        prompt = (f"这是连通性自检，不要读取或修改任何其它文件。"
+                  f"请把 JSON {{\"agent\": \"{name}\", \"ok\": true}} 原样写入 {handoff}，然后只回复 OK。")
+        try:
+            res = run_kimi(prompt, cwd=ROOT, stage_dir=sd, conf=conf, agent=name, tag="selftest")
+            data = read_handoff(handoff, res, required=("ok",))
+            model = ""
+            for line in res.transcript.read_text("utf-8").splitlines():
+                if '"system.version"' in line or '"model"' in line:
+                    model = line[:120]
+                    break
+            print(f"✅ {name:10s} exit={res.exit_code} {res.seconds:.0f}s tools={res.tool_calls} handoff={data}")
+        except Exception as e:  # noqa: BLE001
+            ok = False
+            err = (sd / "selftest.stderr.log")
+            tail = err.read_text("utf-8")[-600:] if err.exists() else ""
+            print(f"❌ {name:10s} {e}\n{tail}")
+    return 0 if ok else 1
+
+
 def _gh_output(key: str, value: str) -> None:
     import os
     path = os.environ.get("GITHUB_OUTPUT")
@@ -128,6 +159,10 @@ def main(argv=None) -> int:
     sd.set_defaults(fn=cmd_seed)
 
     sub.add_parser("status", help="查看状态").set_defaults(fn=cmd_status)
+
+    sf = sub.add_parser("selftest", help="用当前 kimi 配置把每个 agent 调一次")
+    sf.add_argument("--agents", help="逗号分隔，默认全部")
+    sf.set_defaults(fn=cmd_selftest)
 
     args = p.parse_args(argv)
     conf = load_config(args.config)
