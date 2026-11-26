@@ -65,7 +65,7 @@
     "max_rounds": 1
   },
   "ship": {
-    "auto_merge": true,
+    "auto_merge": false,
     "merge_method": "squash"
   },
   "release": {
