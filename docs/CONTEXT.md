@@ -91,7 +91,7 @@ detect.json ──► triage.json ──► patch.json ──► review.json ─
 
 ## 7. 什么不进上下文
 
-- kimi 的完整事件流（`*.transcript.jsonl`）——只用于审计，CI 中作为 artifact 保留 30 天；
+- kimi 的完整事件流（`*.transcript.jsonl`）——只用于审计，CI 中作为 artifact 保留 7 天；
 - 原始构建日志；
 - 上游与 MoonCode 无关的契约变更（只给一个操作名列表，最低优先级）；
 - 任何密钥。App Store Connect 凭证只存在于 MoonCode 仓库的 GitHub Environment 中。

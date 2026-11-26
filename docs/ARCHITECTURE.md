@@ -72,5 +72,5 @@ breaking / likely_breaking 才会进入 AI 分诊；分诊判定“实际兼容�
 ## 运行环境
 
 - **GitHub Actions**：`probe`（ubuntu，几秒）→ 仅在需要时 `adapt`（macos-26，含 Xcode）。kimi 通过 `npm i -g @moonshot-ai/kimi-code`
-  安装，配置来自 `KIMI_CONFIG_TOML` secret。运行产物（上下文包、transcript、构建日志）作为 artifact 保留 30 天。
+  安装，配置来自 `KIMI_CONFIG_TOML` secret。运行产物（上下文包、transcript、构建日志）作为 artifact 保留 7 天。
 - **本机 launchd**：复用本机 Xcode、kimi 登录态与 gh 钥匙串，`scripts/install-launchd.sh`。

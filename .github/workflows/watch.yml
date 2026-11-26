@@ -81,7 +81,9 @@ jobs:
           mkdir -p "$KIMI_CODE_HOME"
           if [ -z "${KIMI_CONFIG_TOML}" ]; then echo "::error::缺少 secret KIMI_CONFIG_TOML"; exit 1; fi
           printf '%s\n' "$KIMI_CONFIG_TOML" > "$KIMI_CODE_HOME/config.toml"
-          kimi doctor
+          chmod 600 "$KIMI_CODE_HOME/config.toml"
+          # 公开仓库的日志所有人可见：只看退出码，不打印配置内容
+          kimi doctor > /dev/null 2>&1 || { echo "::error::kimi 配置校验失败"; exit 1; }
       - name: Configure git
         run: |
           gh auth setup-git
@@ -108,5 +110,5 @@ jobs:
         with:
           name: runs-${{ github.run_id }}
           path: runs/
-          retention-days: 30
+          retention-days: 7
           if-no-files-found: ignore
