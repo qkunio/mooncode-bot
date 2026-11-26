@@ -52,7 +52,7 @@ model = "${MODEL}"
 max_context_size = 1048576
 capabilities = ["thinking", "always_thinking", "image_in", "video_in", "tool_use", "dynamically_loaded_tools"]
 support_efforts = ["low", "high", "max"]
-default_effort = "high"
+default_effort = "max"
 EOF
   unset KEY
 }
