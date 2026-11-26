@@ -44,8 +44,8 @@ flowchart LR
 | 层 | 内容 | 生命周期 | 体量 |
 |---|---|---|---|
 | L0 宪法 | `agents/*.md` 系统提示词 + `skills/` | 固定 | ~1–2k tokens |
-| L1 长期记忆 | `memory/ledger.md`（兼容史与模式）+ 最近 3 条 `memory/episodes/` | 跨运行，distiller 维护，硬上限 | ≤12k 字符 |
-| L2 任务包 | 编排器为**每个阶段**按预算装配的 ContextPack | 单阶段 | 按阶段 5k–30k tokens |
+| L1 长期记忆 | `memory/ledger.md`（兼容史与模式）+ 最近 3 条 `memory/episodes/` | 跨运行，distiller 定期压缩 | 超过 12k 字符触发压缩 |
+| L2 任务包 | 编排器为**每个阶段**源头筛选装配的 ContextPack | 单阶段 | 默认不截断（`manifest.json` 审计） |
 | L3 工作上下文 | kimi 会话内部的推理与工具调用 | 阶段结束即丢弃 | — |
 
 阶段之间**只传结构化 handoff JSON**，不传对话；构建日志先蒸馏成错误摘要再回喂；审查者用全新会话；

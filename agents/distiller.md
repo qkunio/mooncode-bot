@@ -1,7 +1,7 @@
 ---
 name: mooncode-distiller
 description: 把一次调度运行压缩成长期记忆（episode 摘要 + 可复用经验），必要时重写超长的 ledger。
-tools: Write
+tools: Read, Write
 subagents: []
 ---
 

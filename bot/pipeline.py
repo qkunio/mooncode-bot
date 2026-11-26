@@ -44,8 +44,9 @@ class Run:
     def side_effects(self) -> bool:
         return (not self.dry_run) and armed(self.conf)
 
-    def budget(self, stage: str) -> int:
-        return int(cfg(self.conf, f"context.budget_tokens.{stage}", 20000))
+    def budget(self, stage: str) -> Optional[int]:
+        val = (self.conf.get("context") or {}).get("budget_tokens", {}).get(stage)
+        return int(val) if val is not None else None
 
     def ci_link(self) -> str:
         if os.environ.get("GITHUB_RUN_ID"):
@@ -85,32 +86,31 @@ def render_delta(rep: contract.Report, surface: Dict[str, Any], ops_filter: Opti
     for op, items in sorted(groups.items(), key=lambda kv: min(contract.SEVERITY_ORDER[c.severity] for c in kv[1])):
         sev = min((c.severity for c in items), key=lambda s: contract.SEVERITY_ORDER[s])
         out.append(f"### `{op}`  [{sev}]")
-        for c in items[:40]:
+        for c in items:
             out.append(f"- `{c.line()}` — {c.reason}")
-        if len(items) > 40:
-            out.append(f"- …另有 {len(items) - 40} 行")
         if op in ptrs:
             out.append("  MoonCode 位置：" + ", ".join(ptrs[op]))
         out.append("")
     return "\n".join(out)
 
 
-def render_shapes(rep: contract.Report, old_text: str, new_text: str, limit: int = 8) -> str:
-    """对“引用的 shape 换了”这类变更，展开新旧 shape 的字段，避免 agent 只看到两个哈希。"""
+def render_shapes(rep: contract.Report, old_text: str, new_text: str) -> str:
+    """对“引用的 shape 换了”这类变更，按 (旧, 新) 去重展开字段差异，避免 agent 只看到两个哈希。"""
     import re
     old, new = contract.parse(old_text), contract.parse(new_text)
-    pairs = []
+    grouped: Dict[Tuple[str, str], List[str]] = {}
     for c in rep.consumed:
         if c.kind == "changed":
             a = re.findall(r"shape ([0-9a-f]{6,})", c.old or "")
             b = re.findall(r"shape ([0-9a-f]{6,})", c.new or "")
             if a and b and a != b:
-                pairs.append((c.key, a[0], b[0]))
+                grouped.setdefault((a[0], b[0]), []).append(c.key)
     out = []
-    for key, a, b in pairs[:limit]:
+    for (a, b), keys in grouped.items():
         fa, fb = contract.shape_fields(old, a), contract.shape_fields(new, b)
         d = "\n".join(difflib.unified_diff(fa, fb, f"shape {a}", f"shape {b}", lineterm="", n=1))
-        out.append(f"### {key}\n```diff\n{d}\n```")
+        refs = "、".join(keys[:4]) + (f" 等 {len(keys)} 处" if len(keys) > 4 else "")
+        out.append(f"### shape `{a}` → `{b}`（{refs}）\n```diff\n{d}\n```")
     return "\n\n".join(out)
 
 
@@ -128,13 +128,14 @@ def upstream_intents(conf: Dict[str, Any], base: str, head: str) -> str:
     return "\n".join(out)
 
 
-def kap_doc_diff(conf: Dict[str, Any], base: str, head: str, max_chars: int = 5000) -> str:
+def kap_doc_diff(conf: Dict[str, Any], base: str, head: str, max_chars: Optional[int] = None) -> str:
     up = conf["upstream"]
     if github.blob_sha(up["repo"], up["kap_doc_path"], base) == github.blob_sha(up["repo"], up["kap_doc_path"], head):
         return ""
     a = (github.file_at(up["repo"], up["kap_doc_path"], base) or "").splitlines()
     b = (github.file_at(up["repo"], up["kap_doc_path"], head) or "").splitlines()
-    return head_tail("\n".join(difflib.unified_diff(a, b, "kap.md@base", "kap.md@head", lineterm="", n=2)), max_chars)
+    diff = "\n".join(difflib.unified_diff(a, b, "kap.md@base", "kap.md@head", lineterm="", n=2))
+    return head_tail(diff, max_chars) if max_chars is not None else diff
 
 
 # ───────────────────────────── AI 阶段 ─────────────────────────────
@@ -237,11 +238,33 @@ def patch(run: Run, rep: contract.Report, tri: Dict[str, Any], wd: Path, surface
     return read_handoff(handoff, res, required=("summary",)), session, rounds
 
 
+_NOISY_DIFF_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".mp4", ".mov", ".zip", ".svg")
+_LARGE_DATA_EXTS = (".json", ".lock", ".resolved")
+
+
+def format_review_diffs(diff: str, per_file: Optional[int] = None) -> List[str]:
+    """格式化审查 diff：代码文件默认不截断，只对二进制资源或超大生成数据文件改写为摘要。"""
+    parts: List[str] = []
+    for path, chunk in tg.split_diff_by_file(diff):
+        low = path.lower()
+        is_binary = low.endswith(_NOISY_DIFF_EXTS) or "Binary files " in chunk
+        is_big_data = low.endswith(_LARGE_DATA_EXTS) and len(chunk) > 20_000
+        if is_binary or is_big_data:
+            adds = sum(1 for l in chunk.splitlines() if l.startswith("+") and not l.startswith("+++"))
+            dels = sum(1 for l in chunk.splitlines() if l.startswith("-") and not l.startswith("---"))
+            kind = "二进制/资源文件" if is_binary else "大体积数据文件"
+            parts.append(f"# {path}（{kind}，+{adds}/-{dels} 行，已略去正文；需要时用 Read 查看）")
+            continue
+        parts.append(head_tail(chunk, per_file) if per_file is not None else chunk)
+    return parts
+
+
 def review(run: Run, rep: contract.Report, tri: Dict[str, Any], wd: Path, round_no: int) -> Dict[str, Any]:
     sd = run.sdir(f"review-{round_no}")
     handoff = sd / "review.json"
-    per_file = int(cfg(run.conf, "context.diff_max_chars_per_file", 12000))
-    diff_parts = [head_tail(chunk, per_file) for _, chunk in tg.split_diff_by_file(tg.diff_vs_main(wd, run.conf))]
+    raw_limit = (run.conf.get("context") or {}).get("diff_max_chars_per_file")
+    per_file = int(raw_limit) if raw_limit is not None else None
+    diff_parts = format_review_diffs(tg.diff_vs_main(wd, run.conf), per_file)
     pack = ContextPack("review", run.budget("review"))
     pack.add("任务", f"""你是独立审查者，第一次看到这份补丁。它为 MoonCode 适配 Kimi Code {run.label}（{rep.head_sha[:8]}）。
 对照「待适配项」审查下方 diff（需要时可自行读取仓库文件，但不要修改任何文件）。把结论写入 `{handoff}`。""", 0)

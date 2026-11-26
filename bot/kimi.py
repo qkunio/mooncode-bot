@@ -39,6 +39,18 @@ def _text_of(content: Any) -> str:
     return ""
 
 
+MAX_ARGV_BYTES = 100_000  # 远低于 Linux 单参数 128KB 与 macOS ARG_MAX 1MB 上限
+
+
+def _cli_prompt(prompt: str, prompt_file: Path, max_bytes: int = MAX_ARGV_BYTES) -> str:
+    """超长上下文包改走文件指针，避免命令行参数长度超限，同时不截断任何内容。"""
+    if len(prompt.encode("utf-8")) <= max_bytes:
+        return prompt
+    log(f"prompt 超过 {max_bytes // 1000}KB，改为传文件路径 {prompt_file.name}")
+    return (f"完整任务与上下文包已保存在 `{prompt_file}`（共 {len(prompt)} 字符），"
+            f"请先用 Read 工具完整读取该文件，再严格按其中的要求完成任务。")
+
+
 def run_kimi(
     prompt: str,
     *,
@@ -50,8 +62,14 @@ def run_kimi(
     add_dirs: Sequence[Path] = (),
     tag: str = "run",
 ) -> KimiResult:
+    stage_dir.mkdir(parents=True, exist_ok=True)
+    transcript = stage_dir / f"{tag}.transcript.jsonl"
+    errlog = stage_dir / f"{tag}.stderr.log"
+    prompt_file = (stage_dir / f"{tag}.prompt.md").resolve()
+    prompt_file.write_text(prompt, "utf-8")
+
     kc = conf.get("kimi", {})
-    cmd: List[str] = [kc.get("bin") or "kimi", "-p", prompt, "--output-format", "stream-json"]
+    cmd: List[str] = [kc.get("bin") or "kimi", "-p", _cli_prompt(prompt, prompt_file), "--output-format", "stream-json"]
     if session:
         cmd += ["-S", session]  # 续接时不能再带 --agent-file
     elif agent:
@@ -59,15 +77,11 @@ def run_kimi(
     skills = ROOT / (kc.get("skills_dir") or "skills")
     if skills.exists():
         cmd += ["--skills-dir", str(skills)]
-    for d in [*add_dirs, stage_dir.parent]:  # handoff 写在 runs/<id>/ 下，需加入工作区
+    for d in [*add_dirs, stage_dir.parent]:  # handoff 与 prompt 文件都在 runs/<id>/ 下，需加入工作区
         cmd += ["--add-dir", str(d)]
     if kc.get("model"):
         cmd += ["-m", kc["model"]]
 
-    stage_dir.mkdir(parents=True, exist_ok=True)
-    transcript = stage_dir / f"{tag}.transcript.jsonl"
-    errlog = stage_dir / f"{tag}.stderr.log"
-    (stage_dir / f"{tag}.prompt.md").write_text(prompt, "utf-8")
     log(f"kimi ▶ {agent or 'resume'} [{tag}] cwd={cwd.name} session={session or 'new'}")
     t0 = time.time()
     with open(transcript, "w", encoding="utf-8") as out, open(errlog, "w", encoding="utf-8") as err:

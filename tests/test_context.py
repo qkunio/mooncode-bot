@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -6,6 +7,8 @@ from bot import surface
 from bot.context.budget import estimate_tokens, truncate_to_tokens
 from bot.context.logs import digest_build_log
 from bot.context.pack import ContextPack
+from bot.kimi import _cli_prompt
+from bot.pipeline import format_review_diffs
 from bot.target import next_version
 
 SWIFT = r'''
@@ -72,6 +75,40 @@ class ContextTest(unittest.TestCase):
         text = pack.render()
         self.assertIn("/tmp/big.txt", text)
         self.assertNotIn("b" * 100, text)
+
+    def test_pack_unlimited(self):
+        with tempfile.TemporaryDirectory() as d:
+            pack = ContextPack("review", budget=None)
+            big = "x" * 20000
+            pack.add("任务", "审查", 0)
+            pack.add("完整 diff", big, 2)
+            text = pack.render(Path(d))
+            self.assertIn("budget=unlimited", text)
+            self.assertIn(big, text)
+            self.assertNotIn("已截断", text)
+            manifest = json.loads((Path(d) / "manifest.json").read_text("utf-8"))
+            self.assertIsNone(manifest["budget"])
+            self.assertGreater(manifest["used"], 5000)
+            self.assertTrue(all(s["status"] == "full" for s in manifest["sections"]))
+
+    def test_format_review_diffs(self):
+        big_swift = "diff --git a/KimiCode/Core/Conversation.swift b/KimiCode/Core/Conversation.swift\n" + "+let a = 1\n" * 3000
+        big_json = "diff --git a/reference/openapi.json b/reference/openapi.json\n" + '+"k": "v",\n' * 3000
+        binary = "diff --git a/assets/icon.png b/assets/icon.png\nBinary files a/assets/icon.png and b/assets/icon.png differ\n"
+        parts = format_review_diffs(big_swift + big_json + binary, per_file=None)
+        self.assertEqual(len(parts), 3)
+        self.assertEqual(parts[0], big_swift)  # 代码文件完整保留
+        self.assertIn("大体积数据文件", parts[1])
+        self.assertIn("+3000/-0", parts[1])
+        self.assertIn("二进制/资源文件", parts[2])
+
+    def test_cli_prompt_fallback(self):
+        p = Path("/tmp/test.prompt.md")
+        self.assertEqual(_cli_prompt("short", p, max_bytes=100), "short")
+        big = "a" * 200
+        fallback = _cli_prompt(big, p, max_bytes=100)
+        self.assertIn("/tmp/test.prompt.md", fallback)
+        self.assertIn("Read", fallback)
 
     def test_log_digest(self):
         log = "\n".join(["noise"] * 5000 + [

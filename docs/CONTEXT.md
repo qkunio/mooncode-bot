@@ -8,8 +8,8 @@ mooncode-bot 的价值不在“调用了 AI”，而在于**每次调用 AI 时�
 ```mermaid
 flowchart TB
     L0["L0 宪法：agents/*.md + skills/（固定、短）"]
-    L1["L1 长期记忆：memory/ledger.md + 最近 episodes（跨运行、硬上限）"]
-    L2["L2 任务包 ContextPack（每阶段按预算装配）"]
+    L1["L1 长期记忆：memory/ledger.md + 最近 episodes（跨运行、定期压缩）"]
+    L2["L2 任务包 ContextPack（每阶段源头筛选装配，默认不截断）"]
     L3["L3 工作上下文：kimi 会话内部（阶段结束即丢弃）"]
     L0 --> L3
     L1 --> L2 --> L3
@@ -24,28 +24,29 @@ flowchart TB
 - **L2 任务包**：编排器为每个阶段拼装，详见下文。
 - **L3 工作上下文**：kimi 在自己会话里的推理、读文件、跑命令。**永不**向下游传递。
 
-## 2. ContextPack：按优先级 + 预算装箱
+## 2. ContextPack：源头筛选 + 默认不截断
 
-`bot/context/pack.py`。每个 section 带 `priority`（越小越重要）、`min_tokens`、可选 `source`（磁盘路径）。
+`bot/context/pack.py`。上下文治理的核心是**源头降噪**（只放与 MoonCode 相关的契约差异、源码指针、精简记忆、蒸馏错误），
+而不是事后硬切代码。
 
-1. 按优先级把放得下的 section 整段放入；
-2. 放不下的截断到剩余预算（在行边界切），并注明“完整内容见 `<source>`”；
-3. 预算耗尽后的 section 丢弃，若有 `source` 则只留一个指针，agent 真需要时自己 Read；
-4. 渲染顺序保持添加顺序（阅读自然），装箱顺序按优先级（保证关键内容在）。
+- 默认 `budget_tokens` 全为 `null`（**不截断**）：所有经过筛选的高信噪比内容完整交给模型（K3.1 Pro 窗口为 1M tokens）；
+- 审查阶段的 diff 默认不对代码文件截断，只把二进制资源与超大生成数据文件（如 >20KB 的 `.json`）改写为行数摘要；
+- 命令行长度兜底：若某个阶段的 `prompt.md` 超过 100KB，编排器自动改为传一句短指令让 `kimi` 用 `Read` 读取落盘的 `prompt.md`，
+  避免触发操作系统 `ARG_MAX` 限制，同时不丢任何内容；
+- 可选预算模式：若在 `config/bot.json → context.budget_tokens` 里把某阶段设为整数，仍会按 `priority`（越小越重要）装箱、
+  截断并在有 `source` 时留磁盘指针；
+- 可观测性：每个包都会落盘 `runs/<id>/<stage>/context.md` + `manifest.json`（记录各段实际 token 与状态），出问题时可以精确复盘。
 
-每个包落盘为 `runs/<id>/<stage>/context.md` + `manifest.json`（各段 token、是否截断/丢弃）。出问题时可以精确复盘
-“agent 当时看到了什么、没看到什么”。
+各阶段装配内容：
 
-各阶段预算（`config/bot.json → context.budget_tokens`）与内容：
-
-| 阶段 | 预算 | P0 | P1 | P2 | P3+ |
+| 阶段 | 默认截断上限 | P0 | P1 | P2 | P3+ |
 |---|---|---|---|---|---|
-| triage | 24k | 任务 + handoff 路径 | 过滤后的契约差异 + 源码指针 | 上游 PR 意图 | ledger、shape 展开、kap.md diff、episodes、已忽略操作 |
-| patch | 30k | 任务 + 完成标准 | triage 结论、验证命令 | 相关契约差异 + 指针 | ledger、episodes |
-| fix | 6k | “只修这些” | 蒸馏后的错误摘要 | — | 原始日志仅指针 |
-| review | 22k | 审查任务 | triage 结论 | 按文件截断的 diff | ledger |
-| release | 5k | 版本/Tag/PR | 更新日志素材 | — | — |
-| distill | 8k | 任务 | 本次运行结构化记录 | 当前 ledger | — |
+| triage | 不限（`null`） | 任务 + handoff 路径 | 过滤后的契约差异 + 源码指针 | 上游 PR 意图 | ledger、去重 shape 展开、完整 kap.md diff、episodes、已忽略操作 |
+| patch | 不限（`null`） | 任务 + 完成标准 | triage 结论、验证命令 | 相关契约差异 + 指针 | ledger、episodes |
+| fix | 不限（`null`） | “只修这些” | 蒸馏后的错误摘要（≤6k 字符）或审查意见 | — | 原始日志仅指针 |
+| review | 不限（`null`） | 审查任务 | triage 结论 | 完整代码 diff（非代码大文件改摘要） | ledger |
+| release | 不限（`null`） | 版本/Tag/PR | 更新日志素材 | — | — |
+| distill | 不限（`null`） | 任务 | 本次运行结构化记录 | 完整当前 ledger（永不截断） | — |
 
 ## 3. 给指针，不给全文
 
@@ -69,7 +70,7 @@ detect.json ──► triage.json ──► patch.json ──► review.json ─
 ```
 
 - **同阶段续接**：patch 的修复轮次用 `kimi -S <session_id>` 续接同一会话——它需要记得自己刚才改了什么；
-  但每轮只追加一份 ≤6k tokens 的错误摘要，而不是整份日志。
+  但每轮只追加一份蒸馏后的错误摘要（≤6k 字符），而不是整份日志。
 - **跨阶段隔离**：reviewer 永远是新会话，看不到 patcher 的思考过程，只看「待适配项 + diff」——这是刻意的，
   避免“自己审自己”。
 - **只读护栏**：triage / review 结束后编排器检查 `git status`，被改过即回滚并判失败。
@@ -81,7 +82,7 @@ detect.json ──► triage.json ──► patch.json ──► review.json ─
 
 ## 6. 记忆的写入与压缩
 
-每次涉及 AI 的运行结束（成功或失败）后，distiller 阶段（无工具、只能写 handoff）产出：
+每次涉及 AI 的运行结束（成功或失败）后，distiller 阶段（只读 + 只能写 handoff）产出：
 
 - `episode`：≤300 字摘要 → `memory/episodes/<run>.md`；
 - `lessons`：0~5 条可复用经验 → 去重后追加到 ledger 的「自动沉淀的经验」；

@@ -39,18 +39,19 @@
     "skills_dir": "skills"
   },
   "context": {
+    "budget_note": "null 表示不截断，将筛选后的上下文完整交给模型（仍写入 manifest.json 统计 token）；如需硬上限可改为整数",
     "budget_tokens": {
-      "triage": 24000,
-      "patch": 30000,
-      "fix": 6000,
-      "review": 22000,
-      "release": 5000,
-      "distill": 8000
+      "triage": null,
+      "patch": null,
+      "fix": null,
+      "review": null,
+      "release": null,
+      "distill": null
     },
     "ledger_max_chars": 12000,
     "episodes_in_context": 3,
     "log_digest_max_chars": 6000,
-    "diff_max_chars_per_file": 12000
+    "diff_max_chars_per_file": null
   },
   "verify": {
     "commands": [
