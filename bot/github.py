@@ -22,6 +22,15 @@ def api(path: str, raw: bool = False, method: str = "GET", fields: Optional[Dict
     return json.loads(out) if out.strip() else None
 
 
+def npm_dist_tag(package: str, tag: str = "latest") -> str:
+    """npm 上某个 dist-tag 当前指向的版本号（用户 `npm i -g` 实际装到的版本）。"""
+    import urllib.request
+
+    url = f"https://registry.npmjs.org/-/package/{quote(package, safe='@')}/dist-tags"
+    with urllib.request.urlopen(url, timeout=30) as resp:
+        return json.loads(resp.read().decode("utf-8"))[tag]
+
+
 def resolve_sha(repo: str, ref: str) -> str:
     """分支 / Tag（含带注释 Tag）/ 短 SHA → 完整 commit SHA。"""
     return api(f"repos/{repo}/commits/{quote(ref, safe='')}")["sha"]

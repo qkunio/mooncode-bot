@@ -4,15 +4,15 @@
 
 ## 解决什么问题
 
-Kimi Code 迭代非常快（main 分支一天几十个提交），MoonCode 一直紧跟上游做兼容。过去每次都要人工发现“又不兼容了”，
+Kimi Code 迭代非常快（main 一天几十个提交，几乎每天发版），MoonCode 一直紧跟上游做兼容。过去每次都要人工发现“又不兼容了”，
 再向 AI 从头解释一遍：链路是什么、哪些接口被用到、上次怎么兼容的、新旧版本要怎么共存……费心费力。
 
 mooncode-bot 把这件事变成一条**自动调度流水线**：
 
 ```mermaid
 flowchart LR
-    A["kimi-code main 变更"] --> B{"契约 blob 变了?"}
-    B -- 否 --> Z["结束（3 次 API 调用）"]
+    A["Kimi Code 发布新版本（npm latest）"] --> B{"契约变了?"}
+    B -- 否 --> Z["推进基线，结束"]
     B -- 是 --> C["确定性 diff + 接口面过滤 + 定级"]
     C -- 仅新增/无关 --> Y["推进兼容基线"]
     C -- 可能破坏 --> D["kimi · triage 只读确认"]
@@ -28,6 +28,8 @@ flowchart LR
     J --> K["kimi · distiller 沉淀长期记忆"]
 ```
 
+- **按版本触发**：每 15 分钟查一次 npm 上 `@moonshot-ai/kimi-code` 的 `latest` 版本号（用户实际安装的版本），变了才往下走；
+  对应的源码用 GitHub 上的发布 Tag（`@moonshot-ai/kimi-code@X.Y.Z`）定位。`config/bot.json` 里 `upstream.trigger` 改成 `main` 可退回到跟踪每个 main 提交。
 - **检测不用 AI**：上游在 `packages/kap-server/schema/contract.txt` 里维护“一行一个字段”的 KAP 契约。bot 对比
   「已确认兼容的基线」与 main HEAD 的契约，过滤到 MoonCode 真正用到的接口（从 Swift 源码自动扫描），按规则定级。
   绝大多数上游提交连契约都不碰，直接跳过。
@@ -84,7 +86,7 @@ python3 -m bot release --notes "适配最新版 Kimi Code"       # 手动让 kim
 
 ## 云端运行（GitHub Actions）
 
-`watch.yml` 每 15 分钟在 `ubuntu-latest` 上探测一次（只读 2 个 API）。只有契约变了**且**仓库变量 `BOT_ARMED=true`
+`watch.yml` 每 15 分钟在 `ubuntu-latest` 上查一次 npm 版本号。只有发布了新版本**且**仓库变量 `BOT_ARMED=true`
 时才会拉起 `macos-26` runner 执行适配；手动触发（`workflow_dispatch`）默认 `dry_run=true`。
 
 需要配置：

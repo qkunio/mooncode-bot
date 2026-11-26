@@ -1,7 +1,7 @@
 name: watch
 
-# 每 15 分钟看一眼上游 kimi-code main 的 KAP 契约；没变化时 3 个 API 调用就结束。
-# 有变化且影响 MoonCode 时，在 macOS runner 上用 kimi 生成补丁 → 构建验证 → 审查 → 合并 → 拉起提审。
+# 每 15 分钟看一眼 Kimi Code 在 npm 上的最新发布版本；版本号没变就结束（1 次请求）。
+# 发布了新版本时对比 KAP 契约，影响 MoonCode 时，在 macOS runner 上用 kimi 生成补丁 → 构建验证 → 审查 → 合并 → 拉起提审。
 on:
   schedule:
     - cron: "*/15 * * * *"
@@ -11,12 +11,12 @@ on:
         description: "演练：不 push / merge / 打 Tag"
         type: boolean
         default: true
-      head:
-        description: "指定上游 commit（默认 main HEAD）"
+      version:
+        description: "指定 Kimi Code 版本（默认 npm latest）"
         type: string
         default: ""
   repository_dispatch:
-    types: [kimi-code-main-updated]
+    types: [kimi-code-released]
 
 concurrency:
   group: mooncode-bot
@@ -27,7 +27,7 @@ permissions:
 
 jobs:
   probe:
-    name: Probe upstream contract
+    name: Probe Kimi Code version
     runs-on: ubuntu-latest
     outputs:
       changed: ${{ steps.probe.outputs.changed }}
@@ -39,18 +39,26 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json, os, subprocess
-          from urllib.parse import quote
+          import json, os, subprocess, urllib.request
           conf = json.load(open("config/bot.json"))
           st = json.load(open("state/state.json"))
           up = conf["upstream"]
-          def api(p):
-              return json.loads(subprocess.check_output(["gh", "api", p]))
-          head = api(f"repos/{up['repo']}/commits/{up['branch']}")["sha"]
-          blob = api(f"repos/{up['repo']}/contents/{up['contract_path']}?ref={head}")["sha"]
           inflight = st.get("inflight") or {}
-          changed = blob != (st["upstream"].get("compat_blob")) or inflight.get("status") == "awaiting_merge"
-          print(f"head={head[:8]} blob={blob[:8]} compat_blob={(st['upstream'].get('compat_blob') or '')[:8]} changed={changed}")
+          if up.get("trigger", "release") == "release":
+              url = f"https://registry.npmjs.org/-/package/{up['npm_package']}/dist-tags"
+              ver = json.load(urllib.request.urlopen(url, timeout=30))[up.get("npm_dist_tag", "latest")]
+              seen = st["upstream"].get("seen_version")
+              changed = ver != seen
+              print(f"Kimi Code {up.get('npm_dist_tag', 'latest')}={ver} seen={seen}")
+          else:
+              def api(p):
+                  return json.loads(subprocess.check_output(["gh", "api", p]))
+              head = api(f"repos/{up['repo']}/commits/{up['branch']}")["sha"]
+              blob = api(f"repos/{up['repo']}/contents/{up['contract_path']}?ref={head}")["sha"]
+              changed = blob != st["upstream"].get("compat_blob")
+              print(f"main={head[:8]} contract_blob={blob[:8]}")
+          changed = changed or inflight.get("status") == "awaiting_merge"
+          print(f"changed={changed}")
           with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
               fh.write(f"changed={'true' if changed else 'false'}\n")
           PY
@@ -93,7 +101,7 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode.app && xcodebuild -version
       - name: Tick
         id: tick
-        run: python3 -m bot tick ${{ inputs.head && format('--head {0}', inputs.head) || '' }}
+        run: python3 -m bot tick ${{ inputs.version && format('--version {0}', inputs.version) || '' }}
       - name: Persist state & memory
         if: always() && env.BOT_ARMED == 'true'
         env:

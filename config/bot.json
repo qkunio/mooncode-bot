@@ -2,6 +2,11 @@
   "upstream": {
     "repo": "MoonshotAI/kimi-code",
     "branch": "main",
+    "trigger": "release",
+    "trigger_note": "release：npm dist-tag 版本号变化时触发（用户实际安装的版本）；main：每次 main 契约变化都触发",
+    "npm_package": "@moonshot-ai/kimi-code",
+    "npm_dist_tag": "latest",
+    "tag_format": "@moonshot-ai/kimi-code@{version}",
     "contract_path": "packages/kap-server/schema/contract.txt",
     "kap_doc_path": "packages/kap-server/docs/kap.md",
     "seed_ref": "3f514458",

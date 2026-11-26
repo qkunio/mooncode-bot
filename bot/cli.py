@@ -20,7 +20,7 @@ def cmd_tick(args, conf) -> int:
         log("演练模式：不会 push / merge / 打 Tag，也不会写 state（设置 BOT_ARMED=true 才会真正执行）")
     with st.lock():
         try:
-            outcome = pipeline.tick(run, force_head=args.head, skip_agents=args.no_agent)
+            outcome = pipeline.tick(run, force_head=args.head, skip_agents=args.no_agent, version=args.version)
         finally:
             if run.side_effects:
                 st.save(run.state)
@@ -33,7 +33,7 @@ def cmd_detect(args, conf) -> int:
     up = conf["upstream"]
     s = st.load()
     base = github.resolve_sha(up["repo"], args.base or s["upstream"].get("compat_sha") or up["seed_ref"])
-    head = github.resolve_sha(up["repo"], args.head or up["branch"])
+    head = github.resolve_sha(up["repo"], args.head) if args.head else pipeline.resolve_target(conf)[0]
     wd = tg.ensure_clone(conf)
     surface = pipeline.refresh_surface(conf, wd)
     rep = pipeline.detect(conf, surface, base, head)
@@ -103,7 +103,8 @@ def main(argv=None) -> int:
     t = sub.add_parser("tick", help="跑一轮完整调度（检测→适配→验证→审查→合并→提审）")
     t.add_argument("--dry-run", action="store_true", help="不产生任何远端副作用")
     t.add_argument("--no-agent", action="store_true", help="只做确定性检测，不调用 kimi")
-    t.add_argument("--head", help="指定上游 commit（默认 main HEAD）")
+    t.add_argument("--head", help="指定上游 commit")
+    t.add_argument("--version", help="指定 Kimi Code 版本（默认 npm latest）")
     t.set_defaults(fn=cmd_tick)
 
     d = sub.add_parser("detect", help="只看契约差异（不改状态、不调 AI）")

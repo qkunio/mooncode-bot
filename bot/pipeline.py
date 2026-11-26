@@ -31,6 +31,7 @@ class Run:
     id: str
     state: Dict[str, Any]
     dry_run: bool
+    label: str = ""
 
     @property
     def dir(self) -> Path:
@@ -149,7 +150,7 @@ def triage(run: Run, rep: contract.Report, wd: Path, surface: Dict, extras: Dict
     sd = run.sdir("triage")
     handoff = sd / "triage.json"
     pack = ContextPack("triage", run.budget("triage"))
-    pack.add("任务", f"""上游 kimi-code main 的 KAP 契约发生变化（{rep.base_sha[:8]} → {rep.head_sha[:8]}）。
+    pack.add("任务", f"""上游 Kimi Code 发布了 {run.label}，KAP 契约发生变化（{rep.base_sha[:8]} → {rep.head_sha[:8]}）。
 下面是**已按 MoonCode 实际使用的接口面过滤并初步定级**的契约差异。请在当前目录（MoonCode 仓库）里
 对照源码逐条确认：MoonCode 现有代码在新版服务端上是否会出错（解码失败、请求被拒、功能静默失效）。
 
@@ -199,7 +200,7 @@ def patch(run: Run, rep: contract.Report, tri: Dict[str, Any], wd: Path, surface
     handoff = sd / "patch.json"
     ops = {o for it in tri["items"] for o in it.get("ops", [])} or None
     pack = ContextPack("patch", run.budget("patch"))
-    pack.add("任务", f"""为 MoonCode 实现对上游 kimi-code {rep.head_sha[:8]} 的协议兼容。
+    pack.add("任务", f"""为 MoonCode 实现对 Kimi Code {run.label}（{rep.head_sha[:8]}）的协议兼容。
 你在 MoonCode 仓库的分支 `{git_branch(run, rep)}` 上工作，直接修改文件即可，**不要 commit / push**。
 
 完成标准：
@@ -242,7 +243,7 @@ def review(run: Run, rep: contract.Report, tri: Dict[str, Any], wd: Path, round_
     per_file = int(cfg(run.conf, "context.diff_max_chars_per_file", 12000))
     diff_parts = [head_tail(chunk, per_file) for _, chunk in tg.split_diff_by_file(tg.diff_vs_main(wd, run.conf))]
     pack = ContextPack("review", run.budget("review"))
-    pack.add("任务", f"""你是独立审查者，第一次看到这份补丁。它为 MoonCode 适配上游 kimi-code {rep.head_sha[:8]}。
+    pack.add("任务", f"""你是独立审查者，第一次看到这份补丁。它为 MoonCode 适配 Kimi Code {run.label}（{rep.head_sha[:8]}）。
 对照「待适配项」审查下方 diff（需要时可自行读取仓库文件，但不要修改任何文件）。把结论写入 `{handoff}`。""", 0)
     pack.add("待适配项", json.dumps(tri["items"], ensure_ascii=False, indent=2), 1)
     pack.add("补丁 diff（相对 origin/main）", "\n\n".join(f"```diff\n{p}\n```" for p in diff_parts), 2, min_tokens=3000)
@@ -325,26 +326,46 @@ def distill(run: Run, summary: Dict[str, Any]) -> None:
 
 
 def git_branch(run: Run, rep: contract.Report) -> str:
-    return f"{cfg(run.conf, 'target.branch_prefix', 'bot/kap-')}{rep.head_sha[:8]}"
+    return f"{cfg(run.conf, 'target.branch_prefix', 'bot/kap-')}{run.label or rep.head_sha[:8]}"
 
 
 # ───────────────────────────── 总调度 ─────────────────────────────
 
-def tick(run: Run, force_head: Optional[str] = None, skip_agents: bool = False) -> str:
+def resolve_target(conf: Dict[str, Any], version: Optional[str] = None) -> Tuple[str, str]:
+    """返回 (上游 commit, 人类可读标签)。release 模式下以 npm 版本号为准。"""
+    up = conf["upstream"]
+    if version or up.get("trigger", "release") == "release":
+        version = version or github.npm_dist_tag(up["npm_package"], up.get("npm_dist_tag", "latest"))
+        return github.resolve_sha(up["repo"], up["tag_format"].format(version=version)), version
+    sha = github.resolve_sha(up["repo"], up["branch"])
+    return sha, sha[:8]
+
+
+def tick(run: Run, force_head: Optional[str] = None, skip_agents: bool = False, version: Optional[str] = None) -> str:
     conf, s = run.conf, run.state
     up = conf["upstream"]
-    head = force_head or github.resolve_sha(up["repo"], up["branch"])
+    inflight = s.get("inflight") or {}
+    if force_head:
+        head, label = force_head, force_head[:8]
+    else:
+        head, label = resolve_target(conf, version)
+    run.label = label
+    # release 模式快速路径：版本号没变就什么都不做（只花 1 次 npm 请求）
+    if (up.get("trigger", "release") == "release" and not force_head and not version
+            and label == s["upstream"].get("seen_version") and inflight.get("status") != "awaiting_merge"):
+        log(f"Kimi Code 版本仍是 {label}，无需检查")
+        return "no_change"
+    s["upstream"]["seen_version"] = label
     compat = s["upstream"].get("compat_sha") or github.resolve_sha(up["repo"], up["seed_ref"])
     head_blob = github.blob_sha(up["repo"], up["contract_path"], head)
     compat_blob = s["upstream"].get("compat_blob") or github.blob_sha(up["repo"], up["contract_path"], compat)
 
     # 0) 有未合并的适配 PR：先看它的命运
-    inflight = s.get("inflight") or {}
     if inflight.get("pr") and inflight.get("status") == "awaiting_merge":
         state_ = tg.pr_state(conf, inflight["pr"])
         if state_ == "MERGED":
             log(f"适配 PR 已合并：{inflight['pr']}")
-            _advance(s, inflight["head"], inflight["contract_blob"])
+            _advance(s, inflight["head"], inflight["contract_blob"], inflight.get("label"))
             s["inflight"] = None
             wd = tg.ensure_clone(conf)
             if cfg(conf, "release.auto", True):
@@ -356,12 +377,13 @@ def tick(run: Run, force_head: Optional[str] = None, skip_agents: bool = False) 
             log("适配 PR 仍待合并，契约无新变化，跳过")
             return "awaiting_merge"
         if state_ == "OPEN" and run.side_effects:
-            tg.close_pr(conf, inflight["pr"], f"上游契约又变了（→ {head[:8]}），由新的适配取代。")
+            tg.close_pr(conf, inflight["pr"], f"Kimi Code 又发布了新版本（{label}），由新的适配取代。")
         s["inflight"] = None
 
     # 1) 快速路径：契约文件 blob 没变 → 什么都不做（每 15 分钟一次也只花 3 个 API 调用）
     if head_blob == compat_blob:
-        log(f"契约无变化（{head[:8]}），MoonCode 兼容")
+        log(f"{label}：契约无变化，MoonCode 兼容")
+        _advance(s, head, head_blob, label)
         return "no_change"
 
     if inflight.get("contract_blob") == head_blob and inflight.get("attempts", 0) >= 2 and not force_head:
@@ -375,16 +397,16 @@ def tick(run: Run, force_head: Optional[str] = None, skip_agents: bool = False) 
     write_json(run.sdir("detect") / "detect.json", rep.to_dict())
     log(f"检测：{rep.total_changes} 处契约变化，{len(rep.consumed)} 处涉及 MoonCode，最高级别 {rep.max_severity}")
     if not rep.needs_adaptation:
-        _advance(s, head, head_blob)
-        st.record(s, run.id, "compatible", head=head[:8], changes=rep.total_changes)
+        _advance(s, head, head_blob, label)
+        st.record(s, run.id, "compatible", version=label, changes=rep.total_changes)
         return "compatible"
     if skip_agents:
         print(render_delta(rep, surface))
         return "needs_adaptation"
 
-    summary: Dict[str, Any] = {"run": run.id, "base": compat[:8], "head": head[:8], "max_severity": rep.max_severity,
+    summary: Dict[str, Any] = {"run": run.id, "base": compat[:8], "head": head[:8], "version": label, "max_severity": rep.max_severity,
                                "consumed_changes": len(rep.consumed)}
-    s["inflight"] = {"head": head, "contract_blob": head_blob, "status": "adapting",
+    s["inflight"] = {"head": head, "label": label, "contract_blob": head_blob, "status": "adapting",
                      "attempts": (inflight.get("attempts", 0) + 1) if inflight.get("contract_blob") == head_blob else 1}
     try:
         old_text = github.file_at(up["repo"], up["contract_path"], compat) or ""
@@ -396,9 +418,9 @@ def tick(run: Run, force_head: Optional[str] = None, skip_agents: bool = False) 
         tri = triage(run, rep, wd, surface, extras)
         summary["triage"] = {"incompatible": tri["incompatible"], "items": [i.get("title", i.get("id")) for i in tri["items"]]}
         if not tri["incompatible"]:
-            _advance(s, head, head_blob)
+            _advance(s, head, head_blob, label)
             s["inflight"] = None
-            st.record(s, run.id, "compatible_after_triage", head=head[:8])
+            st.record(s, run.id, "compatible_after_triage", version=label)
             distill(run, {**summary, "outcome": "compatible_after_triage", "reason": tri.get("summary")})
             return "compatible_after_triage"
 
@@ -429,11 +451,11 @@ def tick(run: Run, force_head: Optional[str] = None, skip_agents: bool = False) 
             summary["outcome"] = "dry_run_patched"
             distill(run, summary)
             return "dry_run_patched"
-        tg.commit_all(wd, f"fix(kap): 适配 kimi-code {head[:8]} 协议变更\n\n{pt.get('summary', '')}\n\n"
+        tg.commit_all(wd, f"fix(kap): 适配 Kimi Code {label} 协议变更\n\n{pt.get('summary', '')}\n\n"
                           f"Upstream: {compat[:8]}..{head[:8]}\nGenerated-by: mooncode-bot {run.id}")
         tg.push_branch(wd, branch)
         body = _pr_body(run, rep, tri, pt, rv, fix_rounds)
-        pr = tg.open_pr(conf, branch, f"fix(kap): 适配 kimi-code {head[:8]}", body)
+        pr = tg.open_pr(conf, branch, f"fix(kap): 适配 Kimi Code {label}", body)
         summary["pr"] = pr
         s["inflight"].update({"status": "awaiting_merge", "pr": pr, "notes_hint": notes_hint})
         if not cfg(conf, "ship.auto_merge", True):
@@ -441,7 +463,7 @@ def tick(run: Run, force_head: Optional[str] = None, skip_agents: bool = False) 
             distill(run, {**summary, "outcome": "pr_opened"})
             return "pr_opened"
         tg.merge_pr(conf, pr)
-        _advance(s, head, head_blob)
+        _advance(s, head, head_blob, label)
         s["inflight"] = None
 
         # 7) release：kimi -p "拉起 MoonCode vX.Y 审核"
@@ -449,13 +471,13 @@ def tick(run: Run, force_head: Optional[str] = None, skip_agents: bool = False) 
             rel = release(run, wd, notes_hint, pr)
             s["last_release"] = {**rel, "at": now_iso()}
             summary["release"] = rel
-        st.record(s, run.id, "adapted_and_released", pr=pr, head=head[:8])
+        st.record(s, run.id, "adapted_and_released", pr=pr, version=label)
         distill(run, {**summary, "outcome": "adapted_and_released"})
         return "adapted_and_released"
     except Exception as e:  # noqa: BLE001 —— 失败也要沉淀记忆，并保留 inflight 便于重试计数
         if s.get("inflight"):
             s["inflight"]["last_error"] = str(e)[:2000]
-        st.record(s, run.id, "failed", head=head[:8], error=str(e)[:300])
+        st.record(s, run.id, "failed", version=label, error=str(e)[:300])
         summary.update({"outcome": "failed", "error": str(e)[:2000]})
         try:
             distill(run, summary)
@@ -463,8 +485,10 @@ def tick(run: Run, force_head: Optional[str] = None, skip_agents: bool = False) 
             raise
 
 
-def _advance(s: Dict[str, Any], sha: str, blob: Optional[str]) -> None:
+def _advance(s: Dict[str, Any], sha: str, blob: Optional[str], version: Optional[str] = None) -> None:
     s["upstream"]["compat_sha"] = sha
+    if version:
+        s["upstream"]["compat_version"] = version
     s["upstream"]["compat_blob"] = blob
     s["upstream"]["compat_at"] = now_iso()
 
@@ -474,7 +498,7 @@ def _pr_body(run: Run, rep: contract.Report, tri: Dict, pt: Dict, rv: Dict, fix_
     issues = "\n".join(f"- [{i.get('severity')}] {i.get('note', '')}" for i in rv.get("issues", [])) or "无"
     return f"""由 mooncode-bot 自动生成。
 
-**上游区间**：MoonshotAI/kimi-code `{rep.base_sha[:8]}..{rep.head_sha[:8]}`
+**上游版本**：Kimi Code {run.label}（MoonshotAI/kimi-code `{rep.base_sha[:8]}..{rep.head_sha[:8]}`）
 **最高级别**：{rep.max_severity}，涉及 MoonCode 的契约变更 {len(rep.consumed)} 处
 
 ### 待适配项
