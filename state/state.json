@@ -1,11 +1,11 @@
 {
   "upstream": {
     "seen_sha": null,
-    "compat_sha": "46d9085f37c1b145ccfc82a24387e26aa940e94f",
+    "compat_sha": "62402f173c5a838a1c1f8fa263b637a22486fa39",
     "compat_blob": "fcb8427c6834d8e3fc9b6568788cbfc47d97c9eb",
-    "compat_at": "2026-11-26T08:15:23+00:00",
-    "seen_version": "2.8.0",
-    "compat_version": "2.8.0"
+    "compat_at": "2026-11-26T18:10:43+00:00",
+    "seen_version": "2.8.1",
+    "compat_version": "2.8.1"
   },
   "inflight": null,
   "last_release": null,
@@ -18,5 +18,5 @@
       "changes": 238
     }
   ],
-  "updated_at": "2026-11-26T08:15:23+00:00"
+  "updated_at": "2026-11-26T18:10:43+00:00"
 }
